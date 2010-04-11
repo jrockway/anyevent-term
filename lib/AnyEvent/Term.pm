@@ -5,6 +5,8 @@ class AnyEvent::Term {
     use Term::ReadKey;
     use AnyEvent::Handle;
 
+    use Scalar::Util qw(refaddr);
+
     has 'stdin_handle' => (
         is         => 'ro',
         isa        => 'AnyEvent::Handle',
@@ -33,6 +35,18 @@ class AnyEvent::Term {
         AnyEvent::Handle->new(
             fh => \*STDOUT,
         );
+    }
+
+    method clear {
+        $self->clear_stdin_handle;
+        $self->clear_stdout_handle;
+    }
+
+    method kill_reader(CodeRef $reader){
+        $self->stdin_handle->{_queue} = [
+            grep { refaddr $_ != refaddr $reader }
+              @{$self->stdin_handle->{_queue} || []}
+        ];
     }
 
     method DEMOLISH {
