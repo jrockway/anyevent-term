@@ -3,7 +3,6 @@ use MooseX::Declare;
 class AnyEvent::Term::ReadLine {
     use AnyEvent::Subprocess;
     use AnyEvent::Term;
-    use AnyEvent::Pump qw(pump);
 
     use Term::ReadLine;
     use Term::ReadKey;
@@ -41,10 +40,6 @@ class AnyEvent::Term::ReadLine {
         default => sub { sub {} },
     );
 
-    method BUILD($) {
-        $self->setup_term;
-    }
-
     method _build_job {
         return AnyEvent::Subprocess->new(
             delegates     => ['Pty', 'CommHandle'],
@@ -53,7 +48,6 @@ class AnyEvent::Term::ReadLine {
                 $self->comm->handle->destroy;
                 $self->pty->handle->destroy;
                 $self->clear_run;
-                $self->setup_term;
                 $self->on_error->();
             },
             code => sub {
@@ -79,11 +73,5 @@ class AnyEvent::Term::ReadLine {
         $self->comm->handle->push_read( line => sub {
             $result->($_[1]); # just the line, with no $eol
         })
-    }
-
-    method setup_term {
-        # if run is destroyed, stop reading from the terminal
-        $self->run->{_guard} = pump $self->term, $self->pty->handle;
-        pump $self->pty->handle, $self->term;
     }
 }

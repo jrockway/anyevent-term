@@ -9,6 +9,7 @@ requires 'AnyEvent::Pump';
 requires 'AnyEvent::REPL';
 
 requires 'AnyEvent';
+requires 'AnyEvent::Subprocess';
 requires 'MooseX::Declare';
 requires 'Term::ReadLine';
 requires 'Term::ReadKey';
