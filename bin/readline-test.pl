@@ -11,21 +11,32 @@ use AnyEvent::Pump qw(pump);
 use AnyEvent::Term;
 use AnyEvent::Term::ReadLine;
 
-my $loop;
-my $term; $term = AnyEvent::Term::ReadLine->new(
+my $stay_alive = AnyEvent->condvar;
+
+my $term = AnyEvent::Term->instance;
+my $readline = AnyEvent::Term::ReadLine->new(
     prompt   => 'test> ',
-    on_error => sub { $term->push_readline($loop) },
+    on_error => sub { $stay_alive->send },
 );
 
-$loop = sub {
+my $loop; $loop = sub {
     my $line = shift;
+    $term->push_write("Got line: '$line'\n");
+    $readline->push_readline($loop);
+};
+$readline->push_readline($loop);
 
-    $term->term->push_write("Got line: '$line'\n");
-    $term->push_readline($loop);
+my $in = pump $term, $readline, sub {
+    my $char = shift;
+    if($char =~ //){
+        $stay_alive->send('INT');
+        return 0;
+    }
+    return $char;
 };
 
-$term->push_readline($loop);
+my $out = pump $readline, $term;
 
-EV::loop();
-
-$term->kill
+$stay_alive->recv;
+undef $loop;
+$readline->kill;
